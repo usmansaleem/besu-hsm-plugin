@@ -33,6 +33,8 @@ dependencies {
   // Use JUnit Jupiter for testing.
   testImplementation libs.junit.jupiter
   testImplementation libs.assertj.core
+  testImplementation 'org.mockito:mockito-core'
+  testImplementation 'org.mockito:mockito-junit-jupiter'
 
   testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
@@ -46,6 +48,35 @@ java {
 
 tasks.named('test') {
   // Use JUnit Platform for unit tests.
+  useJUnitPlatform()
+}
+
+// Integration test source set and task
+sourceSets {
+  integrationTest {
+    java.srcDir 'src/integrationTest/java'
+    resources.srcDir 'src/integrationTest/resources'
+    compileClasspath += sourceSets.main.output + sourceSets.test.output
+    runtimeClasspath += sourceSets.main.output + sourceSets.test.output
+  }
+}
+
+configurations {
+  integrationTestImplementation.extendsFrom testImplementation
+  integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
+}
+
+dependencies {
+  integrationTestImplementation libs.testcontainers
+  integrationTestImplementation libs.testcontainers.junit.jupiter
+}
+
+tasks.register('integrationTest', Test) {
+  description = 'Runs integration tests.'
+  group = 'verification'
+  testClassesDirs = sourceSets.integrationTest.output.classesDirs
+  classpath = sourceSets.integrationTest.runtimeClasspath
+  dependsOn distZip
   useJUnitPlatform()
 }
 
