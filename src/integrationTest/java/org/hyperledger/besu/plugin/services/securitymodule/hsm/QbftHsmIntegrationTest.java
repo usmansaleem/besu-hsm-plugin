@@ -75,6 +75,7 @@ class QbftHsmIntegrationTest {
       Path.of(System.getProperty("user.dir"), "build", "distributions");
   private static final String INSTALL_PLUGIN_CMD =
       "unzip -o -j /tmp/besu-hsm-plugin.zip -d /opt/besu/plugins/";
+  private static final String EC_CURVE = "secp256k1";
   private static final int RPC_PORT = 8545;
   private static final int P2P_PORT = 30303;
   private static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
@@ -140,6 +141,7 @@ class QbftHsmIntegrationTest {
         new GenericContainer<>(qbftImage)
             .withFileSystemBind(sharedDataDir.toString(), "/data")
             .withFileSystemBind(tokenDir.toString(), "/var/lib/tokens")
+            .withEnv("EC_CURVE", EC_CURVE)
             .withCreateContainerCmdModifier(
                 cmd -> {
                   cmd.withEntrypoint("/entrypoint-setup.sh");
@@ -160,6 +162,7 @@ class QbftHsmIntegrationTest {
     try (GenericContainer<?> container =
         new GenericContainer<>(qbftImage)
             .withFileSystemBind(sharedDataDir.toString(), "/data")
+            .withEnv("EC_CURVE", EC_CURVE)
             .withCreateContainerCmdModifier(
                 cmd -> {
                   cmd.withEntrypoint("/generate-genesis.sh");
@@ -255,6 +258,7 @@ class QbftHsmIntegrationTest {
     cmd.append(" --plugin-pkcs11-hsm-config-path=/etc/besu/config/pkcs11-softhsm.cfg");
     cmd.append(" --plugin-pkcs11-hsm-password-path=/etc/besu/config/pkcs11-hsm-password.txt");
     cmd.append(" --plugin-pkcs11-hsm-key-alias=testkey");
+    cmd.append(" --plugin-pkcs11-hsm-ec-curve=").append(EC_CURVE);
     cmd.append(" --rpc-http-enabled");
     cmd.append(" --rpc-http-api=ETH,NET,QBFT");
     cmd.append(" --rpc-http-host=0.0.0.0");
@@ -290,6 +294,7 @@ class QbftHsmIntegrationTest {
       assertThat(logs).contains("--plugin-pkcs11-hsm-config-path");
       assertThat(logs).contains("--plugin-pkcs11-hsm-password-path");
       assertThat(logs).contains("--plugin-pkcs11-hsm-key-alias");
+      assertThat(logs).contains("--plugin-pkcs11-hsm-ec-curve");
     }
   }
 

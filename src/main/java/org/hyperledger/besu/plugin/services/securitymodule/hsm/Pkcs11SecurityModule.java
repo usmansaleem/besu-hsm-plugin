@@ -38,10 +38,14 @@ public class Pkcs11SecurityModule implements SecurityModule {
   private final PublicKey publicKey;
   private final String signatureAlgorithm;
   private final boolean useP1363;
+  private final SignatureUtil signatureUtil;
 
   public Pkcs11SecurityModule(final Pkcs11CliOptions cliOptions) {
     LOG.debug("Creating Pkcs11SecurityModule ...");
     validateCliOptions(cliOptions);
+    final EcCurveParameters curveParams = new EcCurveParameters(cliOptions.getEcCurve());
+    LOG.info("Using EC curve: {}", curveParams.getCurveName());
+    this.signatureUtil = new SignatureUtil(curveParams);
     this.pkcs11Provider =
         new Pkcs11Provider(
             cliOptions.getPkcs11ConfigPath(),
@@ -62,13 +66,15 @@ public class Pkcs11SecurityModule implements SecurityModule {
       final PrivateKey privateKey,
       final ECPublicKey ecPublicKey,
       final String signatureAlgorithm,
-      final boolean useP1363) {
+      final boolean useP1363,
+      final EcCurveParameters curveParams) {
     this.pkcs11Provider = null;
     this.provider = provider;
     this.privateKey = privateKey;
     this.publicKey = ecPublicKey::getW;
     this.signatureAlgorithm = signatureAlgorithm;
     this.useP1363 = useP1363;
+    this.signatureUtil = new SignatureUtil(curveParams);
   }
 
   private static void validateCliOptions(final Pkcs11CliOptions cliOptions) {
@@ -102,7 +108,7 @@ public class Pkcs11SecurityModule implements SecurityModule {
       signature.initSign(privateKey);
       signature.update(dataHash.toArray());
       final byte[] sigBytes = signature.sign();
-      return SignatureUtil.extractRAndS(sigBytes, useP1363);
+      return signatureUtil.extractRAndS(sigBytes, useP1363);
     } catch (final SecurityModuleException e) {
       throw e;
     } catch (final Exception e) {
@@ -120,7 +126,7 @@ public class Pkcs11SecurityModule implements SecurityModule {
       throws SecurityModuleException {
     LOG.debug("Calculating ECDH key agreement ...");
     final java.security.PublicKey theirPublicKey =
-        SignatureUtil.ecPointToJcePublicKey(partyKey.getW(), provider);
+        signatureUtil.ecPointToJcePublicKey(partyKey.getW(), provider);
     try {
       final KeyAgreement keyAgreement = KeyAgreement.getInstance(KEY_AGREEMENT_ALGORITHM, provider);
       keyAgreement.init(privateKey);
