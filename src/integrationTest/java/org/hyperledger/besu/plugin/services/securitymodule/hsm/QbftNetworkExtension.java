@@ -22,6 +22,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
@@ -146,7 +147,7 @@ class QbftNetworkExtension implements BeforeAllCallback, AfterAllCallback {
 
   private static void deleteDirectory(final Path dir) {
     try (var paths = Files.walk(dir)) {
-      paths.sorted(java.util.Comparator.reverseOrder()).forEach(p -> p.toFile().delete());
+      paths.sorted(Comparator.reverseOrder()).forEach(p -> p.toFile().delete());
     } catch (final IOException e) {
       // Best-effort cleanup
     }
@@ -288,11 +289,11 @@ class QbftNetworkExtension implements BeforeAllCallback, AfterAllCallback {
     cmd.append(INSTALL_PLUGIN_CMD);
     cmd.append(" && /entrypoint-besu.sh");
     cmd.append(" --genesis-file=/data/genesis.json");
-    cmd.append(" --security-module=pkcs11-hsm");
-    cmd.append(" --plugin-pkcs11-hsm-config-path=/etc/besu/config/pkcs11-softhsm.cfg");
-    cmd.append(" --plugin-pkcs11-hsm-password-path=/etc/besu/config/pkcs11-hsm-password.txt");
-    cmd.append(" --plugin-pkcs11-hsm-key-alias=testkey");
-    cmd.append(" --plugin-pkcs11-hsm-ec-curve=").append(ecCurve);
+    cmd.append(" --security-module=hsm");
+    cmd.append(" --plugin-hsm-config-path=/etc/besu/config/pkcs11-softhsm.cfg");
+    cmd.append(" --plugin-hsm-password-path=/etc/besu/config/pkcs11-hsm-password.txt");
+    cmd.append(" --plugin-hsm-key-alias=testkey");
+    cmd.append(" --plugin-hsm-ec-curve=").append(ecCurve);
     cmd.append(" --rpc-http-enabled");
     cmd.append(" --rpc-http-api=ETH,NET,QBFT");
     cmd.append(" --rpc-http-host=0.0.0.0");
