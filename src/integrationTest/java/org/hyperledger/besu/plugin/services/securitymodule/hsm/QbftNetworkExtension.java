@@ -27,6 +27,7 @@ import java.util.List;
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
+import org.testcontainers.containers.BindMode;
 import org.testcontainers.containers.ContainerState;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.Network;
@@ -52,6 +53,7 @@ class QbftNetworkExtension implements BeforeAllCallback, AfterAllCallback {
 
   private static final int NODE_COUNT = 4;
   private static final String IMAGE_NAME = "besu-hsm-test";
+  private static final String BESU_VERSION = System.getProperty("besu.version", "develop");
   private static final Path DOCKER_DIR =
       Path.of(System.getProperty("user.dir"), "docker", "softhsm2");
   private static final Path DIST_DIR =
@@ -81,7 +83,9 @@ class QbftNetworkExtension implements BeforeAllCallback, AfterAllCallback {
   public void beforeAll(final ExtensionContext context) throws Exception {
     tempDir = Files.createTempDirectory("qbft-hsm-" + ecCurve);
     image =
-        new ImageFromDockerfile(IMAGE_NAME, false).withDockerfile(DOCKER_DIR.resolve("Dockerfile"));
+        new ImageFromDockerfile(IMAGE_NAME, false)
+            .withDockerfile(DOCKER_DIR.resolve("Dockerfile"))
+            .withBuildArg("BESU_VERSION", BESU_VERSION);
     network = Network.newNetwork();
     sharedDataDir = Files.createDirectory(tempDir.resolve("data"));
     tokenDirs = new ArrayList<>();
@@ -129,7 +133,7 @@ class QbftNetworkExtension implements BeforeAllCallback, AfterAllCallback {
     if (image != null && tempDir != null) {
       try (GenericContainer<?> cleanup =
           new GenericContainer<>(image)
-              .withFileSystemBind(tempDir.toString(), "/cleanup")
+              .withFileSystemBind(tempDir.toString(), "/cleanup", BindMode.READ_WRITE)
               .withCreateContainerCmdModifier(
                   cmd -> {
                     cmd.withEntrypoint("/bin/sh", "-c");
@@ -182,8 +186,8 @@ class QbftNetworkExtension implements BeforeAllCallback, AfterAllCallback {
 
     try (GenericContainer<?> container =
         new GenericContainer<>(image)
-            .withFileSystemBind(sharedDataDir.toString(), "/data")
-            .withFileSystemBind(tokenDir.toString(), "/var/lib/tokens")
+            .withFileSystemBind(sharedDataDir.toString(), "/data", BindMode.READ_WRITE)
+            .withFileSystemBind(tokenDir.toString(), "/var/lib/tokens", BindMode.READ_WRITE)
             .withEnv("EC_CURVE", ecCurve)
             .withCreateContainerCmdModifier(
                 cmd -> {
@@ -204,7 +208,7 @@ class QbftNetworkExtension implements BeforeAllCallback, AfterAllCallback {
 
     try (GenericContainer<?> container =
         new GenericContainer<>(image)
-            .withFileSystemBind(sharedDataDir.toString(), "/data")
+            .withFileSystemBind(sharedDataDir.toString(), "/data", BindMode.READ_WRITE)
             .withEnv("EC_CURVE", ecCurve)
             .withCreateContainerCmdModifier(
                 cmd -> {
@@ -228,8 +232,8 @@ class QbftNetworkExtension implements BeforeAllCallback, AfterAllCallback {
             .withNetwork(network)
             .withNetworkAliases("besu-node-0")
             .withExposedPorts(RPC_PORT, P2P_PORT)
-            .withFileSystemBind(tokenDirs.get(0).toString(), "/var/lib/tokens")
-            .withFileSystemBind(sharedDataDir.toString(), "/data")
+            .withFileSystemBind(tokenDirs.get(0).toString(), "/var/lib/tokens", BindMode.READ_WRITE)
+            .withFileSystemBind(sharedDataDir.toString(), "/data", BindMode.READ_WRITE)
             .withCopyFileToContainer(MountableFile.forHostPath(distZip), "/tmp/besu-hsm-plugin.zip")
             .withCreateContainerCmdModifier(
                 cmd -> {
@@ -267,8 +271,9 @@ class QbftNetworkExtension implements BeforeAllCallback, AfterAllCallback {
             .withNetwork(network)
             .withNetworkAliases("besu-node-" + nodeIndex)
             .withExposedPorts(RPC_PORT, P2P_PORT)
-            .withFileSystemBind(tokenDirs.get(nodeIndex).toString(), "/var/lib/tokens")
-            .withFileSystemBind(sharedDataDir.toString(), "/data")
+            .withFileSystemBind(
+                tokenDirs.get(nodeIndex).toString(), "/var/lib/tokens", BindMode.READ_WRITE)
+            .withFileSystemBind(sharedDataDir.toString(), "/data", BindMode.READ_WRITE)
             .withCopyFileToContainer(MountableFile.forHostPath(distZip), "/tmp/besu-hsm-plugin.zip")
             .withCreateContainerCmdModifier(
                 cmd -> {
